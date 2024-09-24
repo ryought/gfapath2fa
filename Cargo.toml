@@ -1,0 +1,7 @@
+[package]
+name = "gfapath2fa"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bio = "2"
