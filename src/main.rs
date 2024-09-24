@@ -1,7 +1,37 @@
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader};
 
-fn parse_gfa<R: BufRead>(reader: R) {
+fn parse_p_path(s: &str) -> Vec<(String, bool)> {
+    s.split(',')
+        .map(|s| {
+            let n = s.len();
+            let (first, last) = s.split_at(n - 1);
+            (first.to_string(), (last == "-"))
+        })
+        .collect()
+}
+
+fn parse_w_path(s: &str) -> Vec<(String, bool)> {
+    let indices: Vec<_> = s.match_indices(&['>', '<']).collect();
+    let mut path = vec![];
+    for i in 0..indices.len() {
+        let (pos0, sep) = indices[i];
+        let pos1 = if i == indices.len() - 1 {
+            s.len()
+        } else {
+            indices[i + 1].0
+        };
+        let is_rev = match sep {
+            ">" => false,
+            "<" => true,
+            _ => unreachable!(),
+        };
+        path.push((s[pos0 + 1..pos1].to_string(), is_rev));
+    }
+    path
+}
+
+fn parse_gfa<R: BufRead>(reader: R) -> (Vec<(String, String)>, Vec<(String, Vec<(String, bool)>)>) {
     let mut segments: Vec<(String, String)> = Vec::new();
     let mut paths: Vec<(String, Vec<(String, bool)>)> = Vec::new();
 
@@ -17,29 +47,14 @@ fn parse_gfa<R: BufRead>(reader: R) {
                     }
                     "P" => {
                         let name = tokens[1].to_string();
-                        let path = tokens[2]
-                            .split(',')
-                            .map(|s| {
-                                let n = s.len();
-                                let (first, last) = s.split_at(n - 1);
-                                (first.to_string(), (last == "-"))
-                            })
-                            .collect();
+                        let path = parse_p_path(tokens[2]);
                         paths.push((name, path));
                     }
                     "W" => {
                         // sample#haplotype#chromosome
                         let name = tokens[1..4].join("#");
-                        let indices: Vec<_> = tokens[6].match_indices(&['>', '<']).collect();
-                        for i in 0..indices.len() {
-                            let (pos, sep) = indices[i];
-                            let is_rev = match sep {
-                                ">" => false,
-                                "<" => true,
-                                _ => unreachable!(),
-                            }
-                        }
-                        println!("Wline {} {:?}", name, path);
+                        let path = parse_w_path(tokens[6]);
+                        paths.push((name, path));
                     }
                     _ => {}
                 }
@@ -49,14 +64,13 @@ fn parse_gfa<R: BufRead>(reader: R) {
             }
         }
     }
-    println!("segments = {:?}", segments);
-    println!("paths = {:?}", paths);
+    (segments, paths)
 }
 
 fn main() {
     let reader = BufReader::new(io::stdin());
     println!("Hello, world!");
-    parse_gfa(reader)
+    let (segments, paths) = parse_gfa(reader);
 }
 
 //
@@ -68,6 +82,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn path() {
+        let expected = vec![
+            ("s1".to_string(), false),
+            ("s2".to_string(), false),
+            ("s3".to_string(), true),
+            ("s4".to_string(), false),
+        ];
+        let path = parse_p_path("s1+,s2+,s3-,s4+");
+        println!("{:?}", path);
+        assert_eq!(path, expected);
+
+        let path = parse_w_path(">s1>s2<s3>s4");
+        println!("{:?}", path);
+        assert_eq!(path, expected);
+    }
+
+    #[test]
     fn gfa() {
         let s = vec![
             "H\tVN:Z:1.2",
@@ -75,9 +106,11 @@ mod tests {
             "S\ts2\tTTTTTCCCCC",
             "L\ts1\t+\ts2\t-",
             "P\tp1\ts1+,s2-\t*",
-            "W\ta\t1\tchr1\t0\t10\t>s1>s2<s1>",
+            "W\ta\t1\tchr1\t0\t10\t>s1>s2<s1",
         ]
         .join("\n");
-        parse_gfa(s.as_bytes());
+        let (segments, paths) = parse_gfa(s.as_bytes());
+        println!("segments = {:?}", segments);
+        println!("paths = {:?}", paths);
     }
 }
