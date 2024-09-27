@@ -1,9 +1,9 @@
-S	s1	ATCGATCGCCGC
-S	s2	TTTCGGGGTGGGGn
-S	s3	CCCCCGCGC
-L	s1	+	s2	+	*
-L	s2	+	s3	-	0M
-P	p1	s1+,s2+,s3-
-P	p2	s2+
-W	hg38	0	chr1	0	11	>s1>s2<s3
-W	hg38	0	chr1	10	15	<s2
+S	1	ATCGATCGCCGC
+S	2	TTTCGGGGTGGGGn
+S	3	CCCCCGCGC
+L	1	+	2	+	*
+L	2	+	3	-	0M
+P	p1	1+,2+,3-
+P	p2	2+
+W	hg38	0	chr1	0	11	>1>2<3
+W	hg38	0	chr1	10	15	<2
