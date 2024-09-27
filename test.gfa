@@ -1,0 +1,9 @@
+S	s1	ATCGATCGCCGC
+S	s2	TTTCGGGGTGGGGn
+S	s3	CCCCCGCGC
+L	s1	+	s2	+	*
+L	s2	+	s3	-	0M
+P	p1	s1+,s2+,s3-
+P	p2	s2+
+W	hg38	0	chr1	0	11	>s1>s2<s3
+W	hg38	0	chr1	10	15	<s2

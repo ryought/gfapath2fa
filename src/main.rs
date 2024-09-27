@@ -1,3 +1,4 @@
+use bio::alphabets::dna;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader};
 
@@ -34,8 +35,9 @@ fn parse_w_path(s: &str) -> Vec<(String, bool)> {
 fn parse_gfa<R: BufRead>(reader: R) -> (Vec<(String, String)>, Vec<(String, Vec<(String, bool)>)>) {
     let mut segments: Vec<(String, String)> = Vec::new();
     let mut paths: Vec<(String, Vec<(String, bool)>)> = Vec::new();
+    let alphabet = dna::n_alphabet();
 
-    for line_result in reader.lines() {
+    for (i, line_result) in reader.lines().enumerate() {
         match line_result {
             Ok(line) => {
                 let tokens: Vec<&str> = line.split('\t').collect();
@@ -43,7 +45,15 @@ fn parse_gfa<R: BufRead>(reader: R) -> (Vec<(String, String)>, Vec<(String, Vec<
                     "S" => {
                         let name = tokens[1].to_string();
                         let seq = tokens[2].to_string();
+                        if !alphabet.is_word(seq.as_bytes()) {
+                            panic!("non dna sequence in L{}", i + 1)
+                        }
                         segments.push((name, seq));
+                    }
+                    "L" => {
+                        if !(tokens[5] == "*" || tokens[5] == "0M") {
+                            panic!("overlapping link is not supported in L{}", i + 1)
+                        }
                     }
                     "P" => {
                         let name = tokens[1].to_string();
@@ -52,7 +62,18 @@ fn parse_gfa<R: BufRead>(reader: R) -> (Vec<(String, String)>, Vec<(String, Vec<
                     }
                     "W" => {
                         // sample#haplotype#chromosome
-                        let name = tokens[1..4].join("#");
+                        let name = if tokens[4] != "*" && tokens[4] != "0" {
+                            format!(
+                                "{}#{}#{}:{}-{}",
+                                tokens[1],
+                                tokens[2],
+                                tokens[3],
+                                tokens[4].parse::<usize>().unwrap() + 1,
+                                tokens[5],
+                            )
+                        } else {
+                            tokens[1..4].join("#")
+                        };
                         let path = parse_w_path(tokens[6]);
                         paths.push((name, path));
                     }
@@ -69,8 +90,25 @@ fn parse_gfa<R: BufRead>(reader: R) -> (Vec<(String, String)>, Vec<(String, Vec<
 
 fn main() {
     let reader = BufReader::new(io::stdin());
-    println!("Hello, world!");
     let (segments, paths) = parse_gfa(reader);
+    let segments: HashMap<String, String> = HashMap::from_iter(segments);
+    for (name, path) in paths.iter() {
+        println!(">{}", name);
+        for (node, is_rev) in path {
+            let s = segments
+                .get(node)
+                .unwrap_or_else(|| panic!("node {} is not found", node));
+            if *is_rev {
+                print!(
+                    "{}",
+                    std::str::from_utf8(&dna::revcomp(s.as_bytes())).unwrap()
+                )
+            } else {
+                print!("{}", s)
+            }
+        }
+        print!("\n")
+    }
 }
 
 //
