@@ -1,0 +1,10 @@
+$ cargo build --release
+$ ./target/release/gfapath2fa < test.gfa
+>p1
+ATCGATCGCCGCTTTCGGGGTGGGGnGCGCGGGGG
+>p2
+TTTCGGGGTGGGGn
+>hg38#0#chr1
+ATCGATCGCCGCTTTCGGGGTGGGGnGCGCGGGGG
+>hg38#0#chr1:11-15
+nCCCCACCCCGAAA
